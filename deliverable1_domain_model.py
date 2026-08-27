@@ -166,31 +166,31 @@ class SupportTicket:
 
 
 # sample execution block
-# if __name__ == "__main__":
-#     print("ENTERPRISE DOMAIN MODEL DEMONSTRATION")
-#     print("=" * 46)
-#     print("DOMAIN MODEL OUTPUT")
-#     print("-" * 46)
-#
-#     # Instantiate Learner and Course
-#     learner = Learner("L001", "Linus", "Torvalds", "linus.torvalds@enterprise.com")
-#     course = Course("PY701", "Enterprise Python Development", capacity=25)
-#
-#     print(learner)
-#     print(course)
-#
-#     # Perform Registration
-#     registration = learner.register_course(course)
-#     print(registration)
-#
-#     # Instantiate Assessment and SupportTicket
-#     assessment = Assessment("A101", course, "Midterm Practical", 100.0)
-#     ticket = SupportTicket(
-#         "TK-901", learner, "Cannot access portal labs", priority="HIGH"
-#     )
-#
-#     print("\nINTERACTION VERIFICATION")
-#     print("-" * 46)
-#     print(f"Registered Assessments in {course.course_id}: {len(course.assessments)}")
-#     print(f"Logged Support Tickets for {learner.name}: {len(learner.support_tickets)}")
-#     print(f"Is Course Full? {course.is_full()} ({len(course.registrations)}/{course.capacity} enrolled)")
+if __name__ == "__main__":
+    print("domain model demo")
+    print("=" * 30)
+    print("OUTPUT")
+    print("-" * 30)
+
+    # Instantiate Learner and Course
+    learner = Learner("L001", "Linus", "Torvalds", "linus.torvalds@enterprise.com")
+    course = Course("PY701", "Enterprise Python Development", capacity=25)
+
+    print(learner)
+    print(course)
+
+    # Perform Registration
+    registration = learner.register_course(course)
+    print(registration)
+
+    # Instantiate Assessment and SupportTicket
+    assessment = Assessment("A101", course, "Midterm Practical", 100.0)
+    ticket = SupportTicket(
+        "TK-901", learner, "Cannot access portal labs", priority="HIGH"
+    )
+
+    print("\nINTERACTION VERIFICATION")
+    print("-" * 46)
+    print(f"Registered Assessments in {course.course_id}: {len(course.assessments)}")
+    print(f"Logged Support Tickets for {learner.name}: {len(learner.support_tickets)}")
+    print(f"Is Course Full? {course.is_full()} ({len(course.registrations)}/{course.capacity} enrolled)")
