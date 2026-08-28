@@ -141,9 +141,7 @@ class PerformanceMonitoredEngine:
             return False
 
 
-# =====================================================================
-# TEST SCRIPT FOR SECTION 3.2
-# =====================================================================
+# test script for q3.2
 if __name__ == "__main__":
     print("Starting Bugzot Application Performance Monitoring Test\n")
 
