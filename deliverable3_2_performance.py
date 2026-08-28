@@ -170,4 +170,5 @@ if __name__ == "__main__":
         time.sleep(0.01)  # Brief delay to distinguish timestamps
 
     # Generate the performance report
-    monitor.generate_performance_report()exit()
+    #fixed issue that was accidentally committed to git as well
+    monitor.generate_performance_report()
