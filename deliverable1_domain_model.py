@@ -26,7 +26,7 @@ class Learner:
     def register_course(self, course: "Course") -> "Registration":
         """Factory helper method to register learner for a course."""
         return Registration(
-            f"Created registration: Learner ({self.learner_id})for course ({course.course_id})", self, course
+            f"Created registration: Learner ({self.learner_id}) for course ({course.course_id})", self, course
         )
 
     def __str__(self) -> str:
@@ -35,13 +35,14 @@ class Learner:
 
 class Course:
     """course representation in platform"""
-    #assumption made that courses cannot have more than 30 students by default, no logic given in assignment
+
     def __init__(self, course_id: str, title: str, capacity: int = 30):
         self.course_id = course_id
         self.title = title
         self.capacity = capacity
         self.assessments: List["Assessment"] = []
         self.registrations: List["Registration"] = []
+        self._active_count = 0  #part of optimisation, is a state tracker
 
     @property
     def capacity(self) -> int:
@@ -50,15 +51,20 @@ class Course:
     @capacity.setter
     def capacity(self, value: int):
         if value <= 0:
-            raise ValueError("Course capacity cannot be negativeor null.")
+            raise ValueError("Course capacity cannot be negative or null.")
         self._capacity = value
 
-    #base condition used in Registration to check if a course's capacity has been met
+    # commented out for question 3.3 to prove optimisation
+    # def is_full(self) -> bool:
+    #     active_registrations = [
+    #         r for r in self.registrations if r.status == "ACTIVE"
+    #     ]
+    #     return len(active_registrations) >= self.capacity
+
+    # optimised solution for def is_full(self)
     def is_full(self) -> bool:
-        active_registrations = [
-            r for r in self.registrations if r.status == "ACTIVE"
-        ]
-        return len(active_registrations) >= self.capacity
+        """O(1) complexity solution attempt"""
+        return self._active_count >= self.capacity
 
     def __str__(self) -> str:
         return f"Course: {self.course_id} - {self.title}"
@@ -79,14 +85,21 @@ class Registration:
         self.status = "ACTIVE"  # ACTIVE, COMPLETED, CANCELLED
         self.registration_date = date.today()
 
-        # Wire bi-directional association
+        #bi-directional association
         learner.registrations.append(self)
         course.registrations.append(self)
 
+        #OPTIMIZATION FIX: Increment course active student counter
+        course._active_count += 1
+
     def complete(self):
+        if self.status == "ACTIVE":
+            self.course._active_count -= 1
         self.status = "COMPLETED"
 
     def cancel(self):
+        if self.status == "ACTIVE":
+            self.course._active_count -= 1
         self.status = "CANCELLED"
 
     def __str__(self) -> str:
