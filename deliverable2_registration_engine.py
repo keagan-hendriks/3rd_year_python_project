@@ -1,127 +1,121 @@
 import threading
-from typing import List, Dict, Any, Set
+from typing import List, Dict, Any, Set, Optional
 from deliverable1_domain_model import Learner, Course, Registration
 
 
 class RegistrationEngine:
-    """registration processing engine supporting concurrent registrations,
-    business rules, validation, a duplicate check and mutex lock used
+    """registration processing engine
+    NB!!optional!! bugzot logger dependency injection
     """
 
-    def __init__(self, course: Course):
+    def __init__(self, course: Course, logger: Optional[Any] = None):
         self.course = course
-        #Mutex lock to prebvent deadlocks
+        self.logger = logger
         self._lock = threading.Lock()
-        #Hash set for O(1) duplicate ID verification, uses learner id
         self._registered_learner_ids: Set[str] = set()
 
-        #desk check, remove when done
         self.successful_registrations: List[Dict[str, Any]] = []
         self.unsuccessful_registrations: List[Dict[str, Any]] = []
 
     def process_registration(self, learner: Learner) -> bool:
-        """process for a single learner registration thread
-        Enforces validation, duplicate prevention, and capacity limits.
-        """
+        """Processes registrations, forwards events to logger"""
         with self._lock:
-            full_name = f"{learner.name} {learner.surname}"
+            full_name = f"{learner.name} {learner.surname}".strip()
 
-            #basic validation(fields)
+            #basic validation (fields)
             if not learner.learner_id or not learner.name or not learner.surname:
+                reason = "Validation failure: missing ID, name, or surname"
                 self.unsuccessful_registrations.append(
-                    {
-                        "learner_id": getattr(learner, "learner_id", "N/A"),
-                        "name": full_name,
-                        "reason": "Validation Failure: Missing Learner ID, Name, or Surname",
-                    }
+                    {"learner_id": getattr(learner, "learner_id", "N/A"), "name": full_name, "reason": reason}
                 )
-                print(
-                    f"[Rejected request] Validation failed for Learner ID: {learner.learner_id}"
-                )
+                if self.logger:
+                    self.logger.error("Validation Failure", f"Learner {getattr(learner, 'learner_id', 'Unknown')} missing required attributes")
+                else:
+                    print(f"[Rejected] Validation failed for learner ID: {learner.learner_id}")
                 return False
 
-            #business rule for duplicates
+            #validatiojn for email
+            if "@" not in learner.email or "." not in learner.email:
+                reason = "Validation failure: invalid email format"
+                self.unsuccessful_registrations.append(
+                    {"learner_id": learner.learner_id, "name": full_name, "reason": reason}
+                )
+                if self.logger:
+                    self.logger.error("Validation Failure", f"Learner {learner.learner_id} ({full_name}) has invalid email format: '{learner.email}'")
+                else:
+                    print(f"[Rejected] {full_name} has invalid email format.")
+                return False
+
+            #dupl check
             if learner.learner_id in self._registered_learner_ids:
+                reason = "Duplicate registration attempt"
                 self.unsuccessful_registrations.append(
-                    {
-                        "learner_id": learner.learner_id,
-                        "name": full_name,
-                        "reason": "Duplicate registration attempt",
-                    }
+                    {"learner_id": learner.learner_id, "name": full_name, "reason": reason}
                 )
-                print(
-                    f"[Duplicate] Learner {full_name} is already registered."
-                )
+                if self.logger:
+                    self.logger.warning("Duplicate Registration", f"Learner {learner.learner_id} ({full_name}) is already registered")
+                else:
+                    print(f"[Duplicate] Learner {full_name} is already registered.")
                 return False
 
-            #secondary business rule for course capacity, remember that both have to run
+            #capacity check
             if self.course.is_full():
+                reason = "Course capacity reached"
                 self.unsuccessful_registrations.append(
-                    {
-                        "learner_id": learner.learner_id,
-                        "name": full_name,
-                        "reason": "Course capacity reached",
-                    }
+                    {"learner_id": learner.learner_id, "name": full_name, "reason": reason}
                 )
-                print(
-                    f"[course full] Learner {full_name} rejected. Course full."
-                )
+                if self.logger:
+                    self.logger.warning("Capacity Violation", f"Registration rejected for {full_name}. Course '{self.course.title}' is full.")
+                else:
+                    print(f"[Course full] Learner {full_name} rejected. Course full.")
                 return False
 
-            #use factory method from deliverable 1 to commit changes
+            # 5. Successful Execution
             try:
                 registration = learner.register_course(self.course)
                 self._registered_learner_ids.add(learner.learner_id)
                 self.successful_registrations.append(
-                    {
-                        "learner_id": learner.learner_id,
-                        "name": full_name,
-                        "registration_id": registration.registration_id,
-                    }
+                    {"learner_id": learner.learner_id, "name": full_name, "registration_id": registration.registration_id}
                 )
-                print(f"[succesgull registration] {full_name} registered")
+                if self.logger:
+                    self.logger.info("Registration Success", f"{full_name} registered successfully")
+                else:
+                    print(f"[Success] {full_name} registered")
                 return True
 
             except ValueError as e:
                 self.unsuccessful_registrations.append(
-                    {
-                        "learner_id": learner.learner_id,
-                        "name": full_name,
-                        "reason": str(e),
-                    }
+                    {"learner_id": learner.learner_id, "name": full_name, "reason": str(e)}
                 )
-                print(f"[error: couldn't register] {full_name} error: {e}")
+                if self.logger:
+                    self.logger.error("Registration Exception", f"Failed to register {full_name}: {e}")
+                else:
+                    print(f"[Failed] {full_name} error: {e}")
                 return False
 
     def generate_summary(self) -> None:
-        """desk check summary showing successful and failed transactions"""
+        """Generates an operational summary report."""
         print("\n" + "=" * 45)
-        print("Registration results:")
+        print("Registration Summary")
         print("=" * 45)
-        print(
-            f"Target Course       : {self.course.title} ({self.course.course_id})"
-        )
+        print(f"Target Course       : {self.course.title} ({self.course.course_id})")
         print(f"Course Capacity     : {self.course.capacity}")
         print(f"Total Registrations : {len(self.successful_registrations)}")
         print(f"Total Rejected      : {len(self.unsuccessful_registrations)}")
         print("-" * 45)
 
-        print("Successfukl registstrations:")
+        print("Successful Transactions:")
         if self.successful_registrations:
             for rec in self.successful_registrations:
-                print(
-                    f" - ID: {rec['learner_id']} | Name: {rec['name']} | Reg ID: {rec['registration_id']}"
-                )
+                print(f" - ID: {rec['learner_id']} | Name: {rec['name']} | Reg ID: {rec['registration_id']}")
         else:
             print(" None")
 
         if self.unsuccessful_registrations:
             print("-" * 45)
-            print("failed registrations:")
+            print("Failed Transactions:")
             for rec in self.unsuccessful_registrations:
-                print(
-                    f" - ID: {rec['learner_id']} | Name: {rec['name']} | Reason: {rec['reason']}"
-                )
+                print(f" - ID: {rec['learner_id']} | Name: {rec['name']} | Reason: {rec['reason']}")
         print("=" * 45)
 
 
